@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include <raylib.h>
+#include <stdlib.h>
 
 #include "keys.h"
 
@@ -18,6 +19,8 @@
 
 #define TEXT_LENGTH 27
 
+#define KEYS_ALL 0
+
 #define and &&
 #define not !
 #define or ||
@@ -32,23 +35,46 @@ bool has(int* list, int count, int value)
     return false;
 }
 
-void text_reset(char* text)
+void text_reset(int mode, char* text)
 {
-    for (int i = 0; i < TEXT_LENGTH; i++) {
-        text[i] = 65 + i;
-    }
-    for (int i = 0; i < 10; i++) {
-        int r1 = GetRandomValue(0, TEXT_LENGTH - 2);
-        int r2 = GetRandomValue(0, TEXT_LENGTH - 2);
-        char temp = text[r1];
-        text[r1] = text[r2];
-        text[r2] = temp;
+    if (mode == KEYS_ALL) {
+        for (int i = 0; i < TEXT_LENGTH; i++) {
+            text[i] = 65 + i;
+        }
+        for (int i = 0; i < 10; i++) {
+            int r1 = GetRandomValue(0, TEXT_LENGTH - 2);
+            int r2 = GetRandomValue(0, TEXT_LENGTH - 2);
+            char temp = text[r1];
+            text[r1] = text[r2];
+            text[r2] = temp;
+        }
+    } else {
+        int count = 0;
+        for (int i = 0; i < 10; i++) {
+            char key = pos_keys[mode][i];
+            if (key == 0) {
+                break;
+            }
+            count++;
+        }
+        for (int i = 0; i < TEXT_LENGTH; i++) {
+            int r1 = GetRandomValue(0, count - 1);
+            text[i] = pos_keys[mode][r1];
+        }
     }
     text[TEXT_LENGTH - 1] = 0;
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
+    int text_mode = KEYS_ALL;
+    if (argc == 2) {
+        int selected_mode = atoi(argv[1]);
+        if (has(keys_pos, KP_COUNT, selected_mode)) {
+            text_mode = selected_mode;
+        }
+    }
+
     SetRandomSeed(0);
 
     InitAudioDevice();
@@ -76,7 +102,7 @@ int main(void)
     int key_last_pressed_str_pos = 0;
 
     char text[TEXT_LENGTH] = { 0 };
-    text_reset(text);
+    text_reset(text_mode, text);
     text[TEXT_LENGTH - 1] = 0;
 
     int current_key_to_press_pos = 0;
@@ -150,7 +176,7 @@ int main(void)
                     current_key_to_press_pos += 1;
 
                     if (current_key_to_press_pos == TEXT_LENGTH - 1) {
-                        text_reset(text);
+                        text_reset(text_mode, text);
                     }
 
                     current_key_to_press_pos %= TEXT_LENGTH - 1;
@@ -214,7 +240,7 @@ int main(void)
             }
         }
 
-        DrawCircle(start.x, start.y, 8, ORANGE);
+        // DrawCircle(start.x, start.y, 8, ORANGE);
         DrawCircle(end.x, end.y, 8, RED);
         DrawLineEx(start, end, 4, RED);
 
