@@ -1,7 +1,7 @@
 #include <math.h>
+#include <stdlib.h>
 
 #include <raylib.h>
-#include <stdlib.h>
 
 #include "keys.h"
 
@@ -10,7 +10,7 @@
 #define WIDTH GetScreenWidth()
 #define HEIGHT GetScreenHeight()
 
-#define FONT_SIZE 24
+#define FONT_SIZE 32
 
 #define COLOR_BACKGROUND (Color) { 20, 20, 20, 255 }
 
@@ -77,15 +77,17 @@ int main(int argc, char** argv)
 
     SetRandomSeed(0);
 
+    SetTargetFPS(60);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
+    InitWindow(1000, 450, TITLE);
+
     InitAudioDevice();
     Sound sound_hit = LoadSound("assets/hit-sound.mp3");
     Sound sound_miss = LoadSound("assets/miss-sound.mp3");
     SetSoundVolume(sound_hit, 1.0);
     SetSoundVolume(sound_miss, 0.5);
 
-    SetTargetFPS(48);
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(1000, 450, TITLE);
+    Font font = LoadFont("assets/FiraCodeNerdFontMono-Regular.ttf");
 
     Vector2 margin_kb = { 0 };
 
@@ -108,6 +110,8 @@ int main(int argc, char** argv)
     int current_key_to_press_pos = 0;
 
     double time_combo_start = 0.0;
+    int combo_pb = 0;
+    double cps_pb = 0;
     int combo = 0;
 
     while (not WindowShouldClose()) {
@@ -229,7 +233,7 @@ int main(int argc, char** argv)
                 }
             }
 
-            DrawText((const char*)&key, x + 5, y + 5, FONT_SIZE, WHITE);
+            DrawTextEx(font, (const char*)&key, (Vector2) { x + 5, y + 5 }, FONT_SIZE, 0, WHITE);
 
             if (has(keys_pos, KP_COUNT, key) and has(pos_keys[key], 10, current_key_to_press)) {
                 start = (Vector2) { x + size_key.x / 2.0, y + size_key.y / 2.0 };
@@ -248,27 +252,40 @@ int main(int argc, char** argv)
 
         DrawRectangleRec(bound, DARKGRAY);
 
+        double cps = (combo / (GetTime() - time_combo_start));
+        if (combo_pb < combo) {
+            combo_pb = combo;
+            cps_pb = cps;
+        }
+
         const char* buf = TextFormat("%.*s%.*s", LPS_BUFFER - key_last_pressed_str_pos, key_last_pressed_str_pos + key_last_pressed_str, key_last_pressed_str_pos, key_last_pressed_str);
-        const char* combo_str = TextFormat("Combo: %dx | CPS: %.2lf", combo, (combo / (GetTime() - time_combo_start)));
+        const char* combo_str = TextFormat("Combo: %dx | CPS: %.2lf", combo, cps);
         int buf_w = MeasureText(buf, FONT_SIZE);
         int text_w = MeasureText((const char*)&current_key_to_press, FONT_SIZE);
         int combo_w = MeasureText(combo_str, FONT_SIZE);
 
         int buf_bound_w = FONT_SIZE * 20;
         DrawRectangleRec((Rectangle) { (bound.width + bound.x - buf_bound_w) / 2.0, bound.y + bound.height - FONT_SIZE - 10, buf_bound_w, FONT_SIZE + 10 }, COLOR_BACKGROUND);
-        DrawRectangleRec((Rectangle) { (bound.width + bound.x - buf_bound_w) / 2.0, bound.y, buf_bound_w, FONT_SIZE + 10 }, combo > 10 ? DARKGREEN : COLOR_BACKGROUND);
+        DrawRectangleRec((Rectangle) { (bound.width + bound.x - buf_bound_w) / 2.0, bound.y, buf_bound_w, FONT_SIZE + 10 }, combo > 10 ? cps > 2.0 ? GREEN : cps > 1.0 ? LIME : DARKGREEN : COLOR_BACKGROUND);
 
-        DrawText(
-            combo_str,
-            (bound.width + bound.x - combo_w) / 2.0, bound.y + 5, FONT_SIZE, WHITE);
+        DrawTextEx(font, combo_str,
+            (Vector2) { (bound.width + bound.x - combo_w) / 2.0, bound.y + 5 }, FONT_SIZE, 2, WHITE);
 
-        DrawText(buf, ((bound.width + bound.x) - buf_w) / 2.0, bound.y + bound.height - FONT_SIZE, FONT_SIZE, WHITE);
+        DrawTextEx(font, buf, (Vector2) { ((bound.width + bound.x) - buf_w) / 2.0, bound.y + bound.height - FONT_SIZE }, FONT_SIZE, 2, WHITE);
 
-        DrawText(
+        DrawTextEx(font,
             TextFormat("%s", text + current_key_to_press_pos),
-            (bound.width + bound.x - text_w) / 2.0, bound.y + (bound.height - FONT_SIZE) / 2.0, FONT_SIZE, WHITE);
+            (Vector2) { (bound.width + bound.x - text_w) / 2.0, bound.y + (bound.height - FONT_SIZE) / 2.0 }, FONT_SIZE, 2, WHITE);
 
-        DrawRectangleRec((Rectangle) { 0, bound.y, bound.x + (bound.width - buf_bound_w) / 2.0, bound.height }, COLOR_BACKGROUND);
+        Rectangle pb_bound = { 0, bound.y, bound.x + (bound.width - buf_bound_w) / 2.0, bound.height };
+        DrawRectangleRec(pb_bound, COLOR_BACKGROUND);
+
+        if (combo_pb >= 10) {
+            const char* pb_text = TextFormat("%dx\n\n%.2lf", combo_pb, cps_pb);
+            int pb_w = MeasureText(pb_text, FONT_SIZE);
+            DrawTextEx(font, pb_text, (Vector2) { ((pb_bound.width + pb_bound.x) - pb_w) / 2.0, pb_bound.y + FONT_SIZE }, FONT_SIZE, 2, WHITE);
+        }
+
         DrawRectangleRec((Rectangle) { (bound.width - buf_bound_w) / 2.0 + buf_bound_w, bound.y, bound.x + (bound.width - buf_bound_w) / 2.0, bound.height }, COLOR_BACKGROUND);
 
         EndDrawing();
