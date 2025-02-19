@@ -17,7 +17,7 @@
 #define LP_BUFFER 1
 #define LPS_BUFFER 10
 
-#define TEXT_LENGTH 27
+#define TEXT_LENGTH (27 + 10)
 
 #define KEYS_ALL 0
 
@@ -38,10 +38,13 @@ bool has(int* list, int count, int value)
 void text_reset(int mode, char* text)
 {
     if (mode == KEYS_ALL) {
-        for (int i = 0; i < TEXT_LENGTH; i++) {
+        for (int i = 0; i < 27; i++) {
             text[i] = 65 + i;
         }
         for (int i = 0; i < 10; i++) {
+            text[i + 26] = 48 + i;
+        }
+        for (int i = 0; i < (TEXT_LENGTH / 3); i++) {
             int r1 = GetRandomValue(0, TEXT_LENGTH - 2);
             int r2 = GetRandomValue(0, TEXT_LENGTH - 2);
             char temp = text[r1];
