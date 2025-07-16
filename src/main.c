@@ -20,6 +20,8 @@
 #define TEXT_LENGTH (27 + 10)
 
 #define KEYS_ALL 0
+#define KEYS_CHAR 1
+#define KEYS_NUMS 2
 
 #define and &&
 #define not !
@@ -37,12 +39,24 @@ bool has(int* list, int count, int value)
 
 void text_reset(int mode, char* text)
 {
-    if (mode == KEYS_ALL) {
-        for (int i = 0; i < 27; i++) {
-            text[i] = 65 + i;
+    if (mode == KEYS_ALL || mode == KEYS_CHAR || mode == KEYS_NUMS) {
+        if (mode == KEYS_ALL) {
+            for (int i = 0; i < 27; i++) {
+                text[i] = 65 + i;
+            }
+            for (int i = 0; i < 10; i++) {
+                text[i + 26] = 48 + i;
+            }
         }
-        for (int i = 0; i < 10; i++) {
-            text[i + 26] = 48 + i;
+        else if (mode == KEYS_NUMS) {
+            for (int i = 0; i < TEXT_LENGTH; i++) {
+                text[i] = 48 + (i % 10);
+            }
+        }
+        else if (mode == KEYS_CHAR) {
+            for (int i = 0; i < TEXT_LENGTH; i++) {
+                text[i] = 65 + (i % 27);
+            }
         }
         for (int i = 0; i < (TEXT_LENGTH / 3); i++) {
             int r1 = GetRandomValue(0, TEXT_LENGTH - 2);
@@ -73,7 +87,9 @@ int main(int argc, char** argv)
     int text_mode = KEYS_ALL;
     if (argc == 2) {
         int selected_mode = atoi(argv[1]);
-        if (has(keys_pos, KP_COUNT, selected_mode)) {
+        if (selected_mode < 3) {
+            text_mode = selected_mode;
+        } else if (has(keys_pos, KP_COUNT, selected_mode)) {
             text_mode = selected_mode;
         }
     }
@@ -116,6 +132,8 @@ int main(int argc, char** argv)
     int combo_pb = 0;
     double cps_pb = 0;
     int combo = 0;
+
+    int errors[KEY_COUNT] = { 0 };
 
     while (not WindowShouldClose()) {
 
@@ -201,6 +219,7 @@ int main(int argc, char** argv)
                     if (combo > 10 and IsSoundReady(sound_miss)) {
                         PlaySound(sound_miss);
                     }
+                    errors[i] += 10;
                     combo = 0;
                 }
 
@@ -219,26 +238,36 @@ int main(int argc, char** argv)
 
             } else {
 
+                Color color;
+
                 if (has(key_last_pressed, LP_BUFFER, key)) {
-                    DrawRectangle(x, y, width, size_key.y, BLUE);
+                    color = BLUE;
                 }
 
                 else if (key == KEY_F or key == KEY_J) {
-                    DrawRectangle(x, y, width, size_key.y, ORANGE);
+                    color = ORANGE;
                 }
 
                 else if (has(keys_pos, KP_COUNT, key)) {
-                    DrawRectangle(x, y, width, size_key.y, BROWN);
+                    color = BROWN;
                 }
 
                 else {
-                    DrawRectangle(x, y, width, size_key.y, DARKGRAY);
+                    color = DARKGRAY;
                 }
+
+                if (color.r + errors[i] >= 255) {
+                    color.r = 255;
+                } else {
+                    color.r += errors[i];
+                }
+
+                DrawRectangle(x, y, width, size_key.y, color);
             }
 
             DrawTextEx(font, (const char*)&key, (Vector2) { x + 5, y + 5 }, FONT_SIZE, 0, WHITE);
 
-            if (has(keys_pos, KP_COUNT, key) and has(pos_keys[key], 10, current_key_to_press)) {
+            if ((current_key_to_press == KEY_SPACE and key == KEY_SPACE) or has(keys_pos, KP_COUNT, key) and has(pos_keys[key], 10, current_key_to_press)) {
                 start = (Vector2) { x + size_key.x / 2.0, y + size_key.y / 2.0 };
             }
 
@@ -269,7 +298,9 @@ int main(int argc, char** argv)
 
         int buf_bound_w = FONT_SIZE * 20;
         DrawRectangleRec((Rectangle) { (bound.width + bound.x - buf_bound_w) / 2.0, bound.y + bound.height - FONT_SIZE - 10, buf_bound_w, FONT_SIZE + 10 }, COLOR_BACKGROUND);
-        DrawRectangleRec((Rectangle) { (bound.width + bound.x - buf_bound_w) / 2.0, bound.y, buf_bound_w, FONT_SIZE + 10 }, combo > 10 ? cps > 2.0 ? GREEN : cps > 1.0 ? LIME : DARKGREEN : COLOR_BACKGROUND);
+        DrawRectangleRec((Rectangle) { (bound.width + bound.x - buf_bound_w) / 2.0, bound.y, buf_bound_w, FONT_SIZE + 10 }, combo > 10 ? cps > 2.0 ? GREEN : cps > 1.0 ? LIME
+                                                                                                                                                                       : DARKGREEN
+                                                                                                                                       : COLOR_BACKGROUND);
 
         DrawTextEx(font, combo_str,
             (Vector2) { (bound.width + bound.x - combo_w) / 2.0, bound.y + 5 }, FONT_SIZE, 2, WHITE);
@@ -289,7 +320,7 @@ int main(int argc, char** argv)
             DrawTextEx(font, pb_text, (Vector2) { ((pb_bound.width + pb_bound.x) - pb_w) / 2.0, pb_bound.y + FONT_SIZE }, FONT_SIZE, 2, WHITE);
         }
 
-        DrawRectangleRec((Rectangle) { (bound.width - buf_bound_w) / 2.0 + buf_bound_w, bound.y, bound.x + (bound.width - buf_bound_w) / 2.0, bound.height }, COLOR_BACKGROUND);
+        DrawRectangleRec((Rectangle) { (bound.width - buf_bound_w) / 2.0 + buf_bound_w, bound.y, bound.x + (bound.width - buf_bound_w), bound.height }, COLOR_BACKGROUND);
 
         EndDrawing();
     }
